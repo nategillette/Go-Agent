@@ -45,8 +45,6 @@ func main() {
 
 	byteValue, err := ioutil.ReadAll(resp.Body)
 
-	fmt.Println(byteValue)
-
 	if err != nil {
 		log.Fatal(err)
 	}
