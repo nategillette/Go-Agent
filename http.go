@@ -10,37 +10,43 @@ import (
 	loggly "github.com/jamespearly/loggly"
 )
 
-type Items struct {
-	Items []Data
+type Request struct {
+	Collection Collection `json:"collection"`
 }
+
+type Collection struct {
+	Items []Items `json:"items`
+}
+
+type Items struct {
+	Data  []Data  `json:"data"`
+	Links []Links `json:"links"`
+}
+
 type Data struct {
 	Title       string `json:"title"`
-	Description string `json:"description"`
-	Date        string `json:"keywords"`
 	Center      string `json:"center"`
+	Description string `json:"description_508"`
 	ID          string `json:"nasa_id"`
+}
+
+type Links struct {
+	Link string `json:"href"`
 }
 
 func main() {
 
 	var tag string
-	tag = "My-Go-Demo"
+	tag = "Go"
 
 	client := loggly.New(tag)
 
-	err := client.EchoSend("info", "Good morning!")
-	fmt.Println("err:", err)
-
-	err = client.Send("error", "Good morning! No echo.")
-	fmt.Println("err:", err)
-
 	resp, err := http.Get("https://images-api.nasa.gov/search?q=mercury&year_start=2020&media_type=image")
+	err = client.Send("info", "Request made")
 	if err != nil {
+		client.Send("error", "Request failed")
 		log.Fatal(err)
 	}
-
-	fmt.Println("Got the json")
-
 	defer resp.Body.Close()
 
 	byteValue, err := ioutil.ReadAll(resp.Body)
@@ -49,26 +55,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Saved the json")
+	var request Request
 
-	var items Items
+	e := json.Unmarshal(byteValue, &request)
 
-	json.Unmarshal(byteValue, &items)
+	if e != nil {
+		log.Fatal(e)
+	}
 
-	fmt.Println(items)
+	for i := 0; i < len(request.Collection.Items); i++ {
+		for j := 0; j < len(request.Collection.Items[i].Data); j++ {
+			fmt.Println("Title: " + request.Collection.Items[i].Data[j].Title)
+			fmt.Println("Center: " + request.Collection.Items[i].Data[j].Center)
+			fmt.Println("Description: " + request.Collection.Items[i].Data[j].Description)
+			fmt.Println("ID: " + request.Collection.Items[i].Data[j].ID)
+			for k := 0; k < len(request.Collection.Items[i].Links); k++ {
+				fmt.Println("Link: " + request.Collection.Items[i].Links[k].Link)
+			}
 
-	fmt.Println("Unmarshaled the json")
-
-	fmt.Println("Before for loop")
-	for i := 0; i < len(items.Items); i++ {
-		fmt.Println("Title: " + items.Items[i].Title)
-		fmt.Println("Description: " + items.Items[i].Description)
-		fmt.Println("Date: " + items.Items[i].Date)
-		fmt.Println("Center: " + items.Items[i].Center)
-		fmt.Println("ID: " + items.Items[i].ID)
+		}
 
 	}
 
-	fmt.Println("End of File")
+	err = client.Send("info", "Succesful Query")
+	fmt.Println("err: ", err)
 
 }
