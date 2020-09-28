@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	loggly "github.com/jamespearly/loggly"
 )
@@ -35,7 +36,22 @@ type Links struct {
 }
 
 func main() {
+	duration := time.Duration(1) * time.Second
 
+	tk := time.NewTicker(duration)
+
+	i := 0
+	for range tk.C {
+		i++
+		Query()
+		if i > 5 {
+			tk.Stop()
+			break
+		}
+	}
+}
+
+func Query() {
 	var tag string
 	tag = "Go"
 
@@ -79,5 +95,4 @@ func main() {
 
 	err = client.Send("info", "Succesful Query")
 	fmt.Println("err: ", err)
-
 }
