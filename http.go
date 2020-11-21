@@ -53,7 +53,7 @@ func main() {
 
 func Query() {
 	var tag string
-	tag = "Go"
+	tag = "GoQuery"
 
 	client := loggly.New(tag)
 
