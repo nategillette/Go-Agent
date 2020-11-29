@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	loggly "github.com/jamespearly/loggly"
@@ -36,18 +38,19 @@ type Links struct {
 }
 
 func main() {
-	duration := time.Duration(1) * time.Second
+
+	timer, _ := strconv.Atoi(os.Args[1])
+
+	if timer <= 0 {
+		timer = 60
+	}
+
+	duration := time.Duration(timer) * time.Second
 
 	tk := time.NewTicker(duration)
 
-	i := 0
 	for range tk.C {
-		i++
 		Query()
-		if i > 5 {
-			tk.Stop()
-			break
-		}
 	}
 }
 
