@@ -10,6 +10,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	loggly "github.com/jamespearly/loggly"
 )
 
@@ -27,17 +32,34 @@ type Items struct {
 }
 
 type Data struct {
+	ID          string `json:"nasa_id"`
 	Title       string `json:"title"`
 	Center      string `json:"center"`
 	Description string `json:"description_508"`
-	ID          string `json:"nasa_id"`
 }
 
 type Links struct {
 	Link string `json:"href"`
 }
+type Item struct {
+	ID          string `json:"ID"`
+	Title       string
+	Center      string
+	Description string
+	URL         string
+}
 
 func main() {
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-1"),
+		//Credentials: credentials.NewStaticCredentials("", "", ""),
+	})
+	if err != nil {
+		fmt.Println("Error: Couldn't Start Session")
+	}
+
+	svc := dynamodb.New(sess)
 
 	timer, _ := strconv.Atoi(os.Args[1])
 
@@ -50,17 +72,17 @@ func main() {
 	tk := time.NewTicker(duration)
 
 	for range tk.C {
-		Query()
+		Query(svc)
 	}
 }
 
-func Query() {
+func Query(svc *dynamodb.DynamoDB) {
 	var tag string
 	tag = "GoQuery"
 
 	client := loggly.New(tag)
 
-	resp, err := http.Get("https://images-api.nasa.gov/search?q=mercury&year_start=2020&media_type=image")
+	resp, err := http.Get("https://images-api.nasa.gov/search?q=moon&year_start=2020")
 	err = client.Send("info", "Request made")
 	if err != nil {
 		client.Send("error", "Request failed")
@@ -92,10 +114,56 @@ func Query() {
 				fmt.Println("Link: " + request.Collection.Items[i].Links[k].Link)
 			}
 
+			links := ""
+			if len(request.Collection.Items[i].Links) > 0 {
+				links = request.Collection.Items[i].Links[0].Link
+			}
+
+			item := Item{
+				ID:          request.Collection.Items[i].Data[j].ID,
+				Title:       request.Collection.Items[i].Data[j].Title,
+				Center:      request.Collection.Items[i].Data[j].Center,
+				Description: request.Collection.Items[i].Data[j].Description,
+				URL:         links,
+			}
+			AddDBItem(item, svc)
+
 		}
 
 	}
 
 	err = client.Send("info", "Succesful Query")
 	fmt.Println("err: ", err)
+}
+
+func AddDBItem(item Item, svc *dynamodb.DynamoDB) {
+
+	var tag string
+	tag = "DynamoDB_Write"
+
+	client := loggly.New(tag)
+
+	av, err := dynamodbattribute.MarshalMap(item)
+	if err != nil {
+		fmt.Println("Error in Marshalling Map")
+		client.Send("error", "Couldn't Marshal Map")
+		os.Exit(1)
+	}
+	input := &dynamodb.PutItemInput{
+		Item:      av,
+		TableName: aws.String("ngillet2-NASAPhotos"),
+	}
+	_, err = svc.PutItem(input)
+	if err != nil {
+		fmt.Println(err)
+		client.Send("error", "Couldn't PutItem")
+		os.Exit(1)
+
+	}
+
+	length := len(item.Center) + len(item.Description) + len(item.ID) + len(item.Title) + len(item.URL)
+
+	err = client.Send("info", "New Entry Length:"+strconv.Itoa(length))
+	fmt.Println("err: ", err)
+
 }
