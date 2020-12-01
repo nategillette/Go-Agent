@@ -51,13 +51,9 @@ type Item struct {
 
 func main() {
 
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-east-1"),
-		//Credentials: credentials.NewStaticCredentials("", "", ""),
-	})
-	if err != nil {
-		fmt.Println("Error: Couldn't Start Session")
-	}
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
 
 	svc := dynamodb.New(sess)
 
