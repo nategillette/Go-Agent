@@ -57,11 +57,11 @@ func main() {
 
 	svc := dynamodb.New(sess)
 
-	timer, _ := strconv.Atoi(os.Args[1])
+	//timer, _ := strconv.Atoi(os.Args[1])
 
-	if timer <= 0 {
-		timer = 60
-	}
+	//if timer <= 0 {
+	timer := 60
+	//}
 
 	duration := time.Duration(timer) * time.Second
 
